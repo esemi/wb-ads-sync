@@ -2,26 +2,36 @@ const DOCUMENT_ID = "1rDjtvS4Em9JDvJULABNndxK0rY0HAMMGvee2nk7GWFI";
 const GET_COMPANIES_URL = "https://cmp.wildberries.ru/backend/api/v3/stats/atrevds?pageNumber={page}&pageSize=100&search=&type=null";
 const GET_ITEMS_URL = "https://cmp.wildberries.ru/backend/api/v3/fullstat/{company_id}";
 const SHEET_NAME_COMPANIES = "ads_source"
-const SHEET_NAME_ITEMS = "items_source"
+const SHEET_NAME_ITEMS = "items_source_{page}"
 const SHEET_NAME_APP = "main"
 const SYNC_DATE_CELL = "B1"
 const WB_TOKEN_STATS_CELL = "B4"
 const WB_TOKEN_ITEMS_CELL = "B5"
-const ITEMS_PER_PAGE = 100;
-
+const COMPANIES_PER_PAGE = 100;
+const ITEMS_PER_CALL = 30;
+const SLEEP_TIME = 5 * 1000;
 
 function onOpen() {
     SpreadsheetApp.getUi()
         .createMenu('Custom WB menu')
-        .addItem('Sync WB run', 'syncRun')
+        .addItem('Sync WB adv-companies only', 'syncCompanies')
+        .addItem('Sync WB items page 1', 'syncItemsPage1')
+        .addItem('Sync WB items page 2', 'syncItemsPage2')
+        .addItem('Sync WB items page 3', 'syncItemsPage3')
+        .addItem('Sync WB items page 4', 'syncItemsPage4')
+        .addItem('Sync WB items page 5', 'syncItemsPage5')
+        .addItem('Sync WB items page 6', 'syncItemsPage6')
+        .addItem('Sync WB items page 7', 'syncItemsPage7')
+        .addItem('Sync WB items page 8', 'syncItemsPage8')
+        .addItem('Sync WB items page 9', 'syncItemsPage9')
+        .addItem('Sync WB items page 10', 'syncItemsPage10')
         .addToUi();
 }
 
 
-function syncRun() {
-    console.log('sync start');
+function syncCompanies() {
+    console.log('sync companies start');
 
-    // get saved token
     let googleSpreadSheet = SpreadsheetApp.openById(DOCUMENT_ID);
 
     //load companies
@@ -39,22 +49,6 @@ function syncRun() {
     }
     console.log('companies source up success');
 
-    //load items for all companies
-    let items = _fetchItems(
-        _getItemsToken(googleSpreadSheet),
-        companies
-    );
-    console.log('parse items %s', items.length);
-
-    //fill items sheet
-    let itemsSheet = googleSpreadSheet.getSheetByName(SHEET_NAME_ITEMS);
-    itemsSheet.clear({contentsOnly: true});
-    itemsSheet.getRange(1, 1, 1, 5).setValues([['id', 'title', 'start date', 'end date', 'amount']]);
-    if (items.length){
-        itemsSheet.getRange(2, 1, items.length, 5).setValues(items);
-    }
-    console.log('items source up success');
-
     //up sync date
     let currentDateTime = (new Date()).toLocaleString();
     googleSpreadSheet.getSheetByName(
@@ -64,7 +58,69 @@ function syncRun() {
     ).setValue(
         currentDateTime,
     );
-    console.log('sync complete');
+    console.log('sync companies complete');
+}
+
+
+function syncItemsPage1(page = 1) {
+    syncItems(page);
+}
+function syncItemsPage2(page = 2) {
+    syncItems(page);
+}
+function syncItemsPage3(page = 3) {
+    syncItems(page);
+}
+function syncItemsPage4(page = 4) {
+    syncItems(page);
+}
+function syncItemsPage5(page = 5) {
+    syncItems(page);
+}
+function syncItemsPage6(page = 6) {
+    syncItems(page);
+}
+function syncItemsPage7(page = 7) {
+    syncItems(page);
+}
+function syncItemsPage8(page = 8) {
+    syncItems(page);
+}
+function syncItemsPage9(page = 9) {
+    syncItems(page);
+}
+function syncItemsPage10(page = 10) {
+    syncItems(page);
+}
+
+
+function syncItems(page) {
+    console.log('sync companies start page=%d', page);
+    const startRowOffset = ITEMS_PER_CALL * (page - 1);
+
+    let googleSpreadSheet = SpreadsheetApp.openById(DOCUMENT_ID);
+
+    let companiesSheet = googleSpreadSheet.getSheetByName(SHEET_NAME_COMPANIES);
+    let companies = companiesSheet.getRange(2 + startRowOffset, 1, ITEMS_PER_CALL, 5).getValues().filter(el => el[0]);
+    console.log('debug', companies);
+
+    //load items for all companies
+    let items = _fetchItems(
+        _getItemsToken(googleSpreadSheet),
+        companies
+    );
+    console.log('parse items %s', items.length);
+
+    //fill items sheet
+    let itemsSheet = googleSpreadSheet.getSheetByName(
+        SHEET_NAME_ITEMS.replace('{page}', page)
+    );
+    itemsSheet.clear({contentsOnly: true});
+    itemsSheet.getRange(1, 1, 1, 6).setValues([['company id', 'id', 'title', 'start date', 'end date', 'amount']]);
+    if (items.length){
+        itemsSheet.getRange(2, 1, items.length, items[0].length).setValues(items);
+    }
+    console.log('items page %d updated', page);
 }
 
 
@@ -128,7 +184,7 @@ function _fetchCompanies(token){
         console.log('stats response %s', statsResponseRaw);
         let statsResponse = JSON.parse(statsResponseRaw);
         pageNumber += 1;
-        if (statsResponse.pageCount < ITEMS_PER_PAGE) {
+        if (statsResponse.pageCount < COMPANIES_PER_PAGE) {
             hasNextPage = false;
         }
 
@@ -158,6 +214,7 @@ function _fetchItems(token, companies){
             'X-User-Id': '97739323',
             'cookie': `BasketUID=4547d2b3-790c-4a23-8553-c5ff2bc843e5; _wbauid=4482704701664446372; ___wbu=a3cc44fd-6839-4e14-902c-a38a0e9d8d8a.1664555179; __bsa=basket-ru-43; WILDAUTHNEW_V3=13E92D91E7061BC866357F7B04DD2F1CE18AD44FB0CF8538C268CA19646FC6053A03CAC24DD96DF3225A7C0256D868E37169F3E0EAD7A1D788F90EB2B0F443FBE9EDA434C095E143256EAE796F3B8C775719DF25DE7E8A23DC5A839585091DF17F1332066DB9B5584B471500C3B08E1087222F5A507CE5FCC570B17448DAE3DE5773259031BF491BEE17AA6AAB34DF9FE2E912F3B5E78FE9727DB717D6C786CCE7CA62DBD4FE369E2995E88E01A5A6572DD60A142D7E200B101946ABA1515A6D78D37EAE92D23ABE57D17DCCE0A37B71BF86A99C87F3DFB6815A6DB27B2A29A92A1D14B2D1DD3EC96503BBAF63A91F982D27354DD0472A8A7C1585C29A8BFB3E9F5501F709799786FFE624CA41E75211F94D6DC28CD88F532DC47AFCDC8E9450DF01741A; x-supplier-id-external=40b958e6-2e4b-4ca9-8712-75d775012b97; x-supplier-id=40b958e6-2e4b-4ca9-8712-75d775012b97; WBToken=${token}`,
         };
+        Utilities.sleep(SLEEP_TIME);
         let itemsResponseRaw = UrlFetchApp.fetch(
             GET_ITEMS_URL.replace('{company_id}', company[0]),
             {
@@ -167,10 +224,34 @@ function _fetchItems(token, companies){
                 'validateHttpsCertificates': false,
             },
         ).getContentText();
-        console.log('items %d response %s', company[0], itemsResponseRaw);
+        console.info('items %d response %s', company[0], itemsResponseRaw);
         let itemsResponse = JSON.parse(itemsResponseRaw);
-        //todo impl
-
+        let items = itemsResponse.content.days.map(el => el.apps).flatMap(el => el).map(el => el.nm).flatMap(el => el);
+        let localSummary = _sumByKey(items, 'nmId', 'sum');
+        console.log('items summary', localSummary);
+        for (const item of localSummary) {
+            let itemId = parseInt(item.nmId);
+            if (item.sum && itemId) {
+                data.push([
+                    company[0],
+                    itemId,
+                    company[1],
+                    company[2],
+                    company[3],
+                    item.sum,
+                ]);
+            }
+        }
     }
-    return [];
+    return data;
+}
+
+
+function _sumByKey(arr, key, value) {
+    const map = new Map();
+    for(const obj of arr) {
+        const currSum = map.get(obj[key]) || 0;
+        map.set(obj[key], currSum + obj[value]);
+    }
+    return Array.from(map, ([k, v]) => ({[key]: k, [value]: v}));
 }
